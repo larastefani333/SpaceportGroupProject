@@ -1,0 +1,32 @@
+package model;
+
+public enum EventType {
+
+    //  Cargo operations
+    CARGO_LOADED,
+    CARGO_UNLOADED,
+    CARGO_TRANSFERRED,
+
+    // Docking bay operations
+    BAY_ALLOCATED,
+    BAY_EXCHANGED,
+    BAY_CLOSED,
+    BAY_OPENED,
+
+    // Maintenance Operations
+    MAINTENANCE_TEAM_REGISTERED,
+    MAINTENANCE_ASSIGNED,
+    MAINTENANCE_COMPLETED,
+    MAINTENANCE_TEAM_ACTIVE,
+    MAINTENANCE_TEAM_DEACTIVE,
+
+    // Transport Operations
+    TRANSPORT_CREATED,
+    TRANSPORT_DEPARTED,
+
+    // Connections
+    CLIENT_CONNECTED,
+    CLIENT_DISCONNECTED,
+    ADMINISTRATOR_CONNECTED,
+    ADMINISTRATOR_DISCONNECTED
+}
