@@ -17,6 +17,31 @@ public abstract class ControlTerminal {
 
     public String getUserInput() {
         // read user input from terminal
+        return null;
+    }
+
+    public void handleUserInput() {
+        // process user input and send request to the server
+    }
+
+    public void displayResponse(Response response) {
+        // display server response to user
+    }
+
+    public void displayNotification(Notification notification) {
+        // display notifications received from server
+    }
+
+    public void open() {
+        // open terminal and establish connection
+    }
+
+    public void close() {
+        // close terminal and disconnect from server
+    }
+
+    public void displayMessage(String message) {
+        // display message in terminal
     }
 
 }
