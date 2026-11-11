@@ -1,3 +1,5 @@
+package communication;
+
 public class SpaceportServer {
     
     public SpaceportServer() {
