@@ -1,6 +1,6 @@
 package presentation;
 
-import communication.RequestType;
+import model.EventType;
 
 public class AdministratorTerminal extends ClientTerminal {
 
@@ -10,7 +10,7 @@ public class AdministratorTerminal extends ClientTerminal {
     }
 
     @Override
-    public RequestType processInput() {
+    public EventType processInput() {
         // process administrator input request type
         return null;
     }
