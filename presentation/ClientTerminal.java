@@ -1,6 +1,6 @@
 package presentation;
 
-import communication.RequestType;
+import model.EventType;
 
 public class ClientTerminal extends ControlTerminal {
 
@@ -9,7 +9,7 @@ public class ClientTerminal extends ControlTerminal {
         // display available client commands
     }
 
-    public RequestType processInput() {
+    public EventType processInput() {
         // process client input and request type
         return null;
     }
