@@ -8,7 +8,12 @@ import java.net.ServerSocket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.management.Notification;
+import model.Notification;
+import model.EventType;
+import service.CargoService;
+import service.DockingService;
+import service.MaintenanceService;
+import service.TransportService;
 
 public class SpaceportServer {
 
@@ -17,22 +22,40 @@ public class SpaceportServer {
     private ExecutorService threadPool;
     private boolean running;
 
-    private final int maxClientThreads = 10;
-    private final List<ClientConnection> clientConnections;
+    private CargoService cargoService;
+    private DockingService dockingService;
+    private MaintenanceService maintenanceService;
+    private TransportService transportService;
+
+    private final List<ConnectionHandler> clientConnections;
     
     
     public SpaceportServer(int port) {
         this.port = port;
         this.clientConnections = new ArrayList<>();
+        this.cargoService = new CargoService();
+        this.dockingService = new DockingService();
+        this.maintenanceService = new MaintenanceService();
+        this.transportService = new TransportService();
         this.running = false;
+    }
+
+    public static void main(String[] args) {
+        SpaceportServer server = new SpaceportServer(5000);
+        try {
+            server.start();
+        } catch (IOException e) {
+            System.err.println("SpaceportServer failed to start: " + e.getMessage());
+        }
     }
 
     public void start() throws IOException {
         serverSocket = new ServerSocket(port);
+        int maxClientThreads = 10;
         threadPool = Executors.newFixedThreadPool(maxClientThreads);
         System.out.println("Spaceport Server started on port : " + port);
-        acceptConnections();
         running = true;
+        acceptConnections();
     }
 
     public void stop() {
@@ -52,33 +75,43 @@ public class SpaceportServer {
 
     }
 
-    private void acceptConnections() throws IOException{
+    private void acceptConnections() {
         while (running) {
             try {
                 Socket socket = serverSocket.accept();
-                ClientConnection conn = new ClientConnection(socket, this);
+                ConnectionHandler conn = new ConnectionHandler(socket, this);
                 registerConnection(conn);
                 threadPool.submit(conn);
             } catch (IOException e) {
-                System.out.println("Error accepting client connection.");
+                if (running) {
+                    System.out.println("Error accepting client connection: " + e.getMessage());
+                }
             }
         }
     }
 
     Response handleRequest(Request request) {
         // Process request through appropriate service
-        return new Response(false, "Request not implemented", null);
+        EventType eventType = request.getEventType();
+        System.out.println("Received request: " + eventType);
+        return switch (eventType.getGroup()) {
+            case CARGO -> cargoService.handleRequest(request);
+            case DOCKING_BAYS -> dockingService.handleRequest(request);
+            case MAINTENANCE -> maintenanceService.handleRequest(request);
+            case TRANSPORTS -> transportService.handleRequest(request);
+            default -> new Response(false, "Unsupported operation.", null);
+        };
     }
 
-    synchronized void registerConnection(ClientConnection conn) {
+    synchronized void registerConnection(ConnectionHandler conn) {
         clientConnections.add(conn);
     }
 
-    synchronized void unregisterConnection(ClientConnection conn) {
+    synchronized void unregisterConnection(ConnectionHandler conn) {
         clientConnections.remove(conn);
     }
 
-    private synchronized List<ClientConnection> getConnectedClients() {
+    private synchronized List<ConnectionHandler> getConnectedClients() {
         return new ArrayList<>(clientConnections);
     } 
 
