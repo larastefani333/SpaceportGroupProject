@@ -1,12 +1,20 @@
 package service;
 
 import java.util.List;
+
+import communication.Request;
+import communication.Response;
 import model.Transport;
 import model.MaintenanceTeam;
 
-public class MaintenanceService {
+public class MaintenanceService implements Service {
 
     private EventManager eventManager;
+
+    @Override
+    public Response handleRequest(Request request) {
+        return new Response(true, "Maintenance operation completed.", null);
+    }
 
     public Boolean assignTeam(Transport transport, MaintenanceTeam team) {
         // assign maintenance team to transport

@@ -8,7 +8,12 @@ import java.net.ServerSocket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.management.Notification;
+import model.Notification;
+import model.EventType;
+import service.CargoService;
+import service.DockingService;
+import service.MaintenanceService;
+import service.TransportService;
 
 public class SpaceportServer {
 
@@ -17,12 +22,21 @@ public class SpaceportServer {
     private ExecutorService threadPool;
     private boolean running;
 
+    private CargoService cargoService;
+    private DockingService dockingService;
+    private MaintenanceService maintenanceService;
+    private TransportService transportService;
+
     private final List<ConnectionHandler> clientConnections;
     
     
     public SpaceportServer(int port) {
         this.port = port;
         this.clientConnections = new ArrayList<>();
+        this.cargoService = new CargoService();
+        this.dockingService = new DockingService();
+        this.maintenanceService = new MaintenanceService();
+        this.transportService = new TransportService();
         this.running = false;
     }
 
@@ -31,7 +45,7 @@ public class SpaceportServer {
         try {
             server.start();
         } catch (IOException e) {
-            System.err.println("SpaceportServer failed to start");
+            System.err.println("SpaceportServer failed to start: " + e.getMessage());
         }
     }
 
@@ -69,15 +83,24 @@ public class SpaceportServer {
                 registerConnection(conn);
                 threadPool.submit(conn);
             } catch (IOException e) {
-                System.out.println("Error accepting client connection.");
+                if (running) {
+                    System.out.println("Error accepting client connection: " + e.getMessage());
+                }
             }
         }
     }
 
     Response handleRequest(Request request) {
         // Process request through appropriate service
-        System.out.println("Received request: " + request.getEventType());
-        return new Response(true, "Request received successfully!", null);
+        EventType eventType = request.getEventType();
+        System.out.println("Received request: " + eventType);
+        return switch (eventType.getGroup()) {
+            case CARGO -> cargoService.handleRequest(request);
+            case DOCKING_BAYS -> dockingService.handleRequest(request);
+            case MAINTENANCE -> maintenanceService.handleRequest(request);
+            case TRANSPORTS -> transportService.handleRequest(request);
+            default -> new Response(false, "Unsupported operation.", null);
+        };
     }
 
     synchronized void registerConnection(ConnectionHandler conn) {

@@ -6,5 +6,4 @@ public class Administrator extends User {
         super(userID, username);
     }
 
-    // entry point or just main
 }
