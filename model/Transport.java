@@ -1,9 +1,10 @@
 package model;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Transport {
+public class Transport implements Serializable {
 
     private final String transportID;
     private TransportState state;
