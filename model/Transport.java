@@ -24,55 +24,57 @@ public class Transport {
         this.maxCargoCapacity = maxCargoCapacity;
     }
 
+    // below fields are final so no lock needed
     public String getTransportID() {
         return transportID;
-    }
-
-    public TransportState getState() {
-        return state;
     }
 
     public int getMaxCargoCapacity() {
         return maxCargoCapacity;
     }
 
-    public void setState(TransportState state) {
+    // below fields can be changed by different client threads so lock is needed
+    public synchronized TransportState getState() {
+        return state;
+    }
+
+    public synchronized void setState(TransportState state) {
         this.state = state;
     }
 
-    public LocalDateTime getScheduledDeparture() {
+    public synchronized LocalDateTime getScheduledDeparture() {
         return scheduledDeparture;
     }
 
-    public void setScheduledDeparture(LocalDateTime scheduledDeparture) {
+    public synchronized void setScheduledDeparture(LocalDateTime scheduledDeparture) {
         this.scheduledDeparture = scheduledDeparture;
     }
 
-    public DockingBay getDockingBay() {
+    public synchronized DockingBay getDockingBay() {
         return dockingBay;
     }
 
-    public void setDockingBay(DockingBay dockingBay) {
+    public synchronized void setDockingBay(DockingBay dockingBay) {
         this.dockingBay = dockingBay;
     }
 
-    public MaintenanceTeam getMaintenanceTeam() {
+    public synchronized MaintenanceTeam getMaintenanceTeam() {
         return maintenanceTeam;
     }
 
-    public void setMaintenanceTeam(MaintenanceTeam maintenanceTeam) {
+    public synchronized void setMaintenanceTeam(MaintenanceTeam maintenanceTeam) {
         this.maintenanceTeam = maintenanceTeam;
     }
 
-    public List<Cargo> getCargo() {
+    public synchronized List<Cargo> getCargo() {
         return new ArrayList<>(cargo);
     }
 
-    public void addCargo(Cargo cargoItem) {
+    public synchronized void addCargo(Cargo cargoItem) {
         cargo.add(cargoItem);
     }
 
-    public void removeCargo(Cargo cargoItem) {
+    public synchronized void removeCargo(Cargo cargoItem) {
         cargo.remove(cargoItem);
     }
 }
