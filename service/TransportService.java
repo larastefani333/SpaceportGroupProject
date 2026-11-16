@@ -30,4 +30,8 @@ public class TransportService implements Service{
         return null;
     }
 
+    public Transport getTransport(String transportID) {
+        // retrieve transport by ID
+        return null;
+    }
 }
