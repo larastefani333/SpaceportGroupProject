@@ -38,6 +38,8 @@ public class ConnectionHandler implements Runnable {
 
                     // send result back to client as response
                     sendMessage(response);
+               } else {
+                    sendMessage(new Response(false, "Unsupported message received.", null));
                }
             }
         } catch (EOFException e) {

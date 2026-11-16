@@ -1,11 +1,18 @@
 package service;
 
 import model.Transport;
+import communication.Request;
+import communication.Response;
 import model.DockingBay;
 
-public class DockingService {
+public class DockingService implements Service {
 
     private EventManager eventManager;
+
+    @Override
+    public Response handleRequest(Request request) {
+        return new Response(true, "Docking operation completed.", null);
+    }
 
     public boolean assignBay(Transport transport) {
         // assign docking bay to transport

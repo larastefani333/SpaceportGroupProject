@@ -1,10 +1,18 @@
 package service;
 
+import communication.Request;
+import communication.Response;
 import model.Transport;
 
-public class CargoService {
+public class CargoService implements Service {
 
     private EventManager eventManager;
+
+    @Override
+    public Response handleRequest(Request request) {
+        // Handle cargo operations
+        return new Response(true, "Cargo operation completed.", null);
+    }
 
     public boolean loadCargo(Transport transport, int quantity) {
         // load cargo to transport

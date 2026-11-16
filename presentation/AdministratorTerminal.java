@@ -1,18 +1,23 @@
 package presentation;
 
+import java.util.Arrays;
+
+import communication.ClientConnection;
+import model.EventCategory;
 import model.EventType;
 
-public class AdministratorTerminal extends ClientTerminal {
+public class AdministratorTerminal extends ControlTerminal {
 
-    @Override
-    public void displayMenu() {
-        // display available administrator commands
+    public AdministratorTerminal(ClientConnection conn) {
+        super(conn, "Administrator");
+        initialiseOptions(EventCategory.ADMINISTRATOR);
+        initialisePages();
     }
 
     @Override
-    public EventType processInput() {
-        // process administrator input request type
-        return null;
+    protected EventType[] getOptions() {
+        return Arrays.stream(EventType.values())
+            .filter(type -> type.getCategory() != EventCategory.CONNECTION)
+            .toArray(EventType[]::new);
     }
-
 }
