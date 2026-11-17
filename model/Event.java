@@ -1,33 +1,35 @@
 package model;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 public class Event {
 
     private final String eventID;
-    private final EventType eventType;
+    private final RequestType eventType;
     private final String description;
     private final LocalDateTime timestamp;
 
-    private final String transportID;
-    private final String cargoID;
+    private final User user;
+    private final Map<String, String> associatedIDs;
 
-    public Event(String eventID, EventType eventType, String description,
-                 String transportId, String cargoId) {
+    public Event(String eventID, RequestType eventType, User user, Map<String, String> associatedIDs) {
 
         this.eventID = eventID;
         this.eventType = eventType;
-        this.description = description;
-        this.transportID = transportId;
-        this.cargoID = cargoId;
+        this.user = user;
+        this.associatedIDs = associatedIDs == null ? Map.of() : Map.copyOf(associatedIDs);
         this.timestamp = LocalDateTime.now();
+        this.description = eventType.getCategory() == EventCategory.CONNECTION
+            ? user.getUsername() + " (" + user.getRole().getDisplayName() + ") " + eventType.getDisplayName().toLowerCase()
+            : eventType.getDisplayName();
     }
 
     public String getEventID() {
         return eventID;
     }
 
-    public EventType getEventType() {
+    public RequestType getEventType() {
         return eventType;
     }
 
@@ -39,11 +41,11 @@ public class Event {
         return timestamp;
     }
 
-    public String getTransportID() {
-        return transportID;
+    public User getUser() {
+        return user;
     }
 
-    public String getCargoID() {
-        return cargoID;
+    public Map<String, String> getAssociatedIDs() {
+        return associatedIDs;
     }
 }

@@ -6,17 +6,21 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Map;
 
-import model.EventType;
+import model.RequestType;
+import model.User;
 
 public class ClientConnection {
 
     private final Socket socket;
     private ObjectInputStream input;
     private ObjectOutputStream output;
+    private final User user;
 
-    public ClientConnection(String hostname, int port) throws IOException {
+    public ClientConnection(String hostname, int port, User user) throws IOException {
         this.socket = new Socket(hostname, port);
         initialiseStreams();
+        this.user = user;
+        sendMessage(user);
     }
 
     private void initialiseStreams() throws IOException {
@@ -31,22 +35,26 @@ public class ClientConnection {
         if (!socket.isClosed()) socket.close();
     }
 
-    public void sendRequest(EventType type, Map<String, Object> parameters) throws IOException {
+    public void sendRequest(RequestType type, Map<String, Object> parameters) throws IOException {
         Request request = createRequest(type, parameters);
         sendMessage(request);
     }
 
-    private Request createRequest(EventType type, Map<String, Object> parameters) {
-        return new Request(type, parameters);
+    private Request createRequest(RequestType type, Map<String, Object> parameters) {
+        return new Request(type, parameters, user);
     }
 
-    private synchronized void sendMessage(Object message) throws IOException {
-        output.writeObject(message);
+    private synchronized void sendMessage(Object msg) throws IOException {
+        output.writeObject(msg);
         output.flush();
     }
 
     public Object receiveMessage() throws IOException, ClassNotFoundException {
         return input.readObject();
+    }
+
+    public User getUser() {
+        return user;
     }
 
 }

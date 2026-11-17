@@ -6,4 +6,9 @@ public class Administrator extends User {
         super(userID, username);
     }
 
+    @Override
+    public UserRole getRole() {
+        return UserRole.ADMINISTRATOR;
+    }
+
 }

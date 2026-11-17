@@ -1,6 +1,8 @@
 package model;
 
-public abstract class User {
+import java.io.Serializable;
+
+public abstract class User implements Serializable {
     private final String userID;
     private final String username;
 
@@ -9,6 +11,8 @@ public abstract class User {
         this.username = username;
     }
 
+    public abstract UserRole getRole();
+
     public String getUserID() {
         return userID;
     }
@@ -16,4 +20,5 @@ public abstract class User {
     public String getUsername() {
         return username;
     }
-} 
+
+}
