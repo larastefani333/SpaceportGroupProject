@@ -4,20 +4,12 @@ import java.util.List;
 import java.util.ArrayList;
 import communication.Request;
 import communication.Response;
-import model.Transport;
 import model.MaintenanceTeam;
+import model.Transport;
 import model.MaintenanceTeamStatus;
 import model.TransportState;
-import model.EventType;
-
 
 public class MaintenanceService implements Service {
-
-    private final EventManager eventManager;
-
-    public MaintenanceService(EventManager eventManager) {
-        this.eventManager = eventManager;
-    }
 
     @Override
     public Response handleRequest(Request request) {
@@ -40,8 +32,6 @@ public class MaintenanceService implements Service {
         //update statuses
         transport.setState(TransportState.SERVICING);
         team.setStatus(MaintenanceTeamStatus.BUSY);
-
-        eventManager.handleSuccessfulEvent(EventType.MAINTENANCE_ASSIGNED, "Team " + team.getTeamID() + " assigned to transport " + transport.getTransportID());
 
         return true;
     }
@@ -72,8 +62,6 @@ public class MaintenanceService implements Service {
         //update statuses
         transport.setState(TransportState.READY);
         team.setStatus(MaintenanceTeamStatus.AVAILABLE);
-
-        eventManager.handleSuccessfulEvent(EventType.MAINTENANCE_COMPLETED, "Maintenance completed for transport " + transport.getTransportID() + " by team " + team.getTeamID());
 
         return true;
     }
@@ -162,8 +150,6 @@ public class MaintenanceService implements Service {
                 }
 
                 team.setStatus(MaintenanceTeamStatus.INACTIVE);
-
-                eventManager.handleSuccessfulEvent(EventType.MAINTENANCE_DECOMMISSIONED, "Team " + team.getTeamID() + " deactivated");
 
                 return true;
             }

@@ -1,9 +1,9 @@
 package service;
 
-import model.Transport;
 import communication.Request;
 import communication.Response;
 import model.DockingBay;
+import model.Transport;
 
 public class DockingService implements Service {
 

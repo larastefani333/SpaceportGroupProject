@@ -1,8 +1,9 @@
 package infrastructure;
 
 import java.util.List;
+
 import model.Event;
-import model.EventType;
+import model.RequestType;
 
 public class EventLog {
 
@@ -17,7 +18,7 @@ public class EventLog {
         return null;
     }
 
-    public List<Event> getEventsByType(EventType eventType) {
+    public List<Event> getEventsByType(RequestType eventType) {
         // get events by type
         return null;
     }

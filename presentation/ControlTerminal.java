@@ -1,6 +1,8 @@
 
 package presentation;
 
+import communication.ClientConnection;
+import communication.Response;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
@@ -10,16 +12,12 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.util.Map;
-
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-
-import communication.ClientConnection;
-import communication.Response;
-import model.Notification;
 import model.EventCategory;
 import model.EventGroup;
-import model.EventType;
+import model.Notification;
+import model.RequestType;
 
 public abstract class ControlTerminal extends JFrame {
 
@@ -41,7 +39,7 @@ public abstract class ControlTerminal extends JFrame {
     public ControlTerminal(ClientConnection conn, String role) {
         this.conn = conn;
 
-        setTitle("Spaceport Management System - " + role);
+        setTitle("Spaceport Management System - " + conn.getUser().getUsername() + " (" + role + ")");
         setSize(1100, 700);
         setMinimumSize(new Dimension(850, 550));
         setLocationRelativeTo(null);
@@ -60,7 +58,7 @@ public abstract class ControlTerminal extends JFrame {
         buildUI(role);
     }
 
-    protected abstract EventType[] getOptions();
+    protected abstract RequestType[] getOptions();
 
     protected void displayResponse(Response response) {
         JOptionPane.showMessageDialog(
@@ -89,7 +87,7 @@ public abstract class ControlTerminal extends JFrame {
     }
 
     private JLabel buildHeader(String role) {
-        JLabel title = new JLabel("Spaceport Management System (" + role + ")", SwingConstants.CENTER);
+        JLabel title = new JLabel("Spaceport Management System - "  + conn.getUser().getUsername() + " ("+ role + ")", SwingConstants.CENTER);
         title.setFont(TITLE_FONT);
         return title;
     }
@@ -139,6 +137,9 @@ public abstract class ControlTerminal extends JFrame {
 
     public void displayNotification(Notification notification) {
         notificationArea.append(notification.getMessage() + "\n");
+
+        // Automatically scrolls to the latest notification.
+        notificationArea.setCaretPosition(notificationArea.getDocument().getLength());
     }
 
     public void open() {
@@ -192,11 +193,17 @@ public abstract class ControlTerminal extends JFrame {
             heading.setFont(HEADING_FONT);
             groupPanel.add(heading);
 
-            for (EventType event : EventType.values()) {
+            for (RequestType event : RequestType.values()) {
                 if(category.allows(event.getCategory()) && event.getGroup() == group) {
                     JButton btn = new JButton(event.getDisplayName());
                     btn.setFont(BUTTON_FONT);
-                    btn.addActionListener(e -> showPage(event.name()));
+                    btn.addActionListener(e -> {
+                        if (event.requiresForm()) {
+                            showPage(event.name());
+                        } else {
+                            submitRequest(event, Map.of());
+                        }
+                    });
                     groupPanel.add(btn);
                 }
             }
@@ -206,13 +213,16 @@ public abstract class ControlTerminal extends JFrame {
 }
 
     protected void initialisePages() {
-        for (EventType type : getOptions()) {
+        for (RequestType type : getOptions()) {
+            if (!type.requiresForm()) {
+                continue;
+            }
             OperationForm form = new OperationForm(this, type);
             interactionPnl.add(form, type.name());
         }
     }
 
-    public void submitRequest(EventType type, Map<String, Object> params) {
+    public void submitRequest(RequestType type, Map<String, Object> params) {
         try {
             conn.sendRequest(type, params);
         } catch (IOException e) {
