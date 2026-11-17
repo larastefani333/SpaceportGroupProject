@@ -14,6 +14,7 @@ import service.CargoService;
 import service.DockingService;
 import service.MaintenanceService;
 import service.TransportService;
+import service.EventManager;
 
 public class SpaceportServer {
 
@@ -35,7 +36,8 @@ public class SpaceportServer {
         this.clientConnections = new ArrayList<>();
         this.cargoService = new CargoService();
         this.dockingService = new DockingService();
-        this.maintenanceService = new MaintenanceService();
+        EventManager eventManager = new EventManager();
+        this.maintenanceService = new MaintenanceService(eventManager); // needs eventManager argument
         this.transportService = new TransportService();
         this.running = false;
     }
