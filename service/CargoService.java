@@ -70,9 +70,9 @@ public class CargoService implements Service {
                             + " to " + destination.getTransportID() + ".", null);
                 }
                 return new Response(false, "Transfer failed", null);
+            default:
+                return new Response(false, "CargoService cannot handle " + request.getEventType() + ".", null);
         }
-
-        return new Response(true, "Cargo operation completed.", null);
     }
 
     public boolean loadCargo(Transport transport, int quantity) {
