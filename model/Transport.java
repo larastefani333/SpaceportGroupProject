@@ -13,6 +13,7 @@ public class Transport {
 
     private final List<Cargo> cargo;
     private final int maxCargoCapacity;
+    private int totalCargoUnits;
     
 
     public Transport(String transportId, LocalDateTime scheduledDeparture, int maxCargoCapacity) {
@@ -74,5 +75,12 @@ public class Transport {
 
     public void removeCargo(Cargo cargoItem) {
         cargo.remove(cargoItem);
+    }
+
+    public int getTotalCargoUnits() {
+        for (Cargo cargo : cargo) {
+            totalCargoUnits += cargo.getCargoUnits();
+        }
+        return totalCargoUnits;
     }
 }

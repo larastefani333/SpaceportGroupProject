@@ -5,10 +5,13 @@ import java.util.List;
 import communication.Request;
 import communication.Response;
 import model.Transport;
+import model.TransportState;
 
 public class TransportService implements Service{
 
     private EventManager eventManager;
+    private Transport transport;
+    private int capacity;
 
     @Override
     public Response handleRequest(Request request) {
