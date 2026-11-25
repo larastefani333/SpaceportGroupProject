@@ -83,4 +83,8 @@ public class Transport {
         }
         return totalCargoUnits;
     }
+
+    public void setTotalCargoUnits(int totalCargoUnits) {
+        this.totalCargoUnits = totalCargoUnits;
+    }
 }
