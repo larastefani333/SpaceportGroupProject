@@ -1,10 +1,10 @@
 package presentation;
 
-import java.util.Arrays;
-
 import communication.ClientConnection;
-import model.EventType;
 import model.EventCategory;
+import model.RequestType;
+
+import java.util.Arrays;
 
 public class ClientTerminal extends ControlTerminal {
 
@@ -15,9 +15,9 @@ public class ClientTerminal extends ControlTerminal {
     }
 
     @Override
-    protected EventType[] getOptions() {
-        return Arrays.stream(EventType.values())
+    protected RequestType[] getOptions() {
+        return Arrays.stream(RequestType.values())
             .filter(type -> type.getCategory() == EventCategory.CLIENT)
-            .toArray(EventType[]::new);
+            .toArray(RequestType[]::new);
     }
 }

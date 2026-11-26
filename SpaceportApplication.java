@@ -1,11 +1,15 @@
-import java.io.IOException;
-import java.util.Scanner;
-
-import javax.swing.SwingUtilities;
 
 import communication.ClientConnection;
-import presentation.ClientTerminal;
+import java.io.IOException;
+import java.util.Scanner;
+import java.util.UUID;
+import javax.swing.SwingUtilities;
+
+import model.Administrator;
+import model.Client;
+import model.User;
 import presentation.AdministratorTerminal;
+import presentation.ClientTerminal;
 
 public class SpaceportApplication {
 
@@ -39,9 +43,41 @@ public class SpaceportApplication {
         }
     }
 
+    private static String getUsername() {
+        while (true) { 
+            System.out.print("Enter username (or 0 to cancel operation): ");
+            String username = in.nextLine().strip();
+
+            if (username.equals("0")) {
+                return null;
+            }
+
+            if (username.isEmpty()) {
+                System.out.println("Username cannot be empty - please try again (or select 0 to cancel");
+            } else {
+                return username;
+            }
+        }
+    }
+
+    private static User createUser(boolean isAdministrator) {
+        // should establish rules related to usernames + userID
+        // + validation in the future with checking non duplicate usernames + built out log in system
+        String username = getUsername();
+        String userID = UUID.randomUUID().toString();
+
+        if (isAdministrator) {
+            return new Administrator(userID, username);
+        }
+        return new Client(userID, username);
+    }
+
     private static void startTerminal(boolean isAdministrator) {
         try {
-            ClientConnection conn = new ClientConnection(HOSTNAME, PORT);
+            User user = createUser(isAdministrator);
+            if (user == null) return;
+            
+            ClientConnection conn = new ClientConnection(HOSTNAME, PORT, user);
             SwingUtilities.invokeLater(() -> {
                 if (isAdministrator) {
                     AdministratorTerminal terminal = new AdministratorTerminal(conn);

@@ -1,30 +1,45 @@
 package service;
 
-import java.util.concurrent.ExecutorService;
-
-import communication.Request;
-import communication.Response;
 import communication.SpaceportServer;
+import java.time.format.DateTimeFormatter;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import model.Event;
 import model.Notification;
 
-public class NotificationService implements Service {
+public class NotificationService {
 
-    private SpaceportServer spaceportServer;
-    private ExecutorService notificationExecutor;
+    private final SpaceportServer spaceportServer;
+    private final ExecutorService notificationExecutor;
 
-    @Override
-    public Response handleRequest(Request request) {
-        return new Response(true, "Docking operation completed.", null);
+    public NotificationService(SpaceportServer spaceportServer) {
+        this.spaceportServer = spaceportServer;
+        this.notificationExecutor = Executors.newSingleThreadExecutor();
     }
 
-    public Notification createNotification(Event event) {
-        // create notification from event
-        return null;
+    public void handleEvent(Event event) {
+        Notification notification = createNotification(event);
+        distributeNotification(notification);
     }
 
-    public void distributeNotification(Notification notification) {
-        // distribute notification to clients
+    private Notification createNotification(Event event) {
+        String timestamp = event.getTimestamp().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
+
+        return new Notification(
+                UUID.randomUUID().toString(),
+                "[" + timestamp + "] " + event.getDescription(),
+                event.getEventType()
+        );
     }
 
+    private void distributeNotification(Notification notification) {
+        notificationExecutor.submit(() ->
+                spaceportServer.broadcastNotification(notification)
+        );
+    }
+
+    public void shutdown() {
+        notificationExecutor.shutdown();
+    }
 }

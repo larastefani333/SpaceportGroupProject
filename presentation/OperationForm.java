@@ -14,20 +14,18 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerDateModel;
-
-import model.EventType;
+import model.RequestType;
 
 public class OperationForm extends JPanel {
 
     private final ControlTerminal terminal;
-    private final EventType eventType;
+    private final RequestType eventType;
 
     private final Map<String, JTextField> fields = new LinkedHashMap<>();
 
@@ -36,7 +34,7 @@ public class OperationForm extends JPanel {
 
     private int nextRow = 0;
 
-    public OperationForm(ControlTerminal terminal, EventType eventType) {
+    public OperationForm(ControlTerminal terminal, RequestType eventType) {
         this.terminal = terminal;
         this.eventType = eventType;
         setLayout(new BorderLayout(10, 15));
@@ -55,16 +53,12 @@ public class OperationForm extends JPanel {
         switch (eventType.getGroup()) {
             case CARGO ->
                 initialiseCargoFields(fieldsPanel, constraints);
-
             case DOCKING_BAYS ->
                 initialiseDockingBayFields(fieldsPanel, constraints);
-
             case MAINTENANCE ->
                 initialiseMaintenanceFields(fieldsPanel, constraints);
-
             case TRANSPORTS ->
                 initialiseTransportFields(fieldsPanel, constraints);
-
             default -> {
                 add(new JLabel("This operation does not have an input form."), BorderLayout.CENTER);
                 return;
@@ -191,7 +185,7 @@ public class OperationForm extends JPanel {
     private void submit() {
         try {
             Map<String, Object> params = collectParams();
-            if (eventType == EventType.TRANSPORT_CREATED) {
+            if (eventType == RequestType.TRANSPORT_CREATED) {
                 params.put("scheduledDeparture", getScheduledDeparture());
             }
             terminal.submitRequest(eventType, params);
@@ -218,8 +212,7 @@ public class OperationForm extends JPanel {
 
     private Object convertValue(String paramName, String value) {
         switch (paramName) {
-            case "cargoUnits":
-            case "maxCargoCapacity":
+            case "cargoUnits", "maxCargoCapacity" -> {
                 int num;
                 try {
                     num = Integer.parseInt(value);
@@ -230,8 +223,10 @@ public class OperationForm extends JPanel {
                     throw new IllegalArgumentException(paramName + " must be greater than zero.");
                 }
                 return num;
-            default:
+            }
+            default -> {
                 return value;
+            }
         }
     }
 
@@ -242,13 +237,8 @@ public class OperationForm extends JPanel {
         Date date = (Date) departureDate.getValue();
         Date time = (Date) departureTime.getValue();
 
-        LocalDate localDate = date.toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate();
-
-        LocalTime localTime = time.toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalTime();
+        LocalDate localDate = date.toInstant().atZone(ZoneId.systemDefault()) .toLocalDate();
+        LocalTime localTime = time.toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
 
         localTime = LocalTime.of(localTime.getHour(), localTime.getMinute());
 
