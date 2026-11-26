@@ -3,7 +3,6 @@ package service;
 import communication.Request;
 import communication.Response;
 import model.Cargo;
-import model.EventType;
 import model.Transport;
 import model.TransportState;
 
@@ -13,22 +12,20 @@ import java.util.Map;
 
 public class CargoService implements Service {
 
-    private final EventManager eventManager;
     private final TransportService transportService;
     private int nextCargoIdNumber = 1;
 
-    public CargoService(EventManager eventManager, TransportService transportService) {
-        this.eventManager = eventManager;
+    public CargoService(TransportService transportService) {
         this.transportService = transportService;
     }
 
     @Override
     public Response handleRequest(Request request) {
         Map<String, Object> params = request.getParameters();
-        Integer quantity = readQuantity(params.get("quantity"));
+        Integer CargoUnits = readCargoUnits(params.get("Cargo units"));
 
-        if (quantity == null) {
-            return new Response(false, "Quantity must be a whole number.", null);
+        if (CargoUnits == null) {
+            return new Response(false, "Cargo units must be a whole number.", null);
         }
 
         switch (request.getEventType()) {
@@ -37,9 +34,9 @@ public class CargoService implements Service {
                 if (transport == null) {
                     return new Response(false, "Transport not found.", null);
                 }
-                if (loadCargo(transport, quantity)) {
-                    return new Response(true, quantity + " units loaded onto " + transport.getTransportID()
-                            + ". Cargo is now " + transport.getCargo() + "/" + transport.getMaxCargoCapacity() + ".",
+                if (loadCargo(transport, CargoUnits)) {
+                    return new Response(true, CargoUnits + " units loaded onto " + transport.getTransportID()
+                            + ". Cargo is now " + totalCargoUnits(transport) + "/" + transport.getMaxCargoCapacity() + ".",
                             null);
                 }
                 return new Response(false, "Load failed", null);
@@ -49,9 +46,9 @@ public class CargoService implements Service {
                 if (transport == null) {
                     return new Response(false, "Transport not found.", null);
                 }
-                if (unloadCargo(transport, quantity)) {
-                    return new Response(true, quantity + " units unloaded from " + transport.getTransportID()
-                            + ". Cargo is now " + transport.getCargo() + "/" + transport.getMaxCargoCapacity() + ".",
+                if (unloadCargo(transport, CargoUnits)) {
+                    return new Response(true, CargoUnits + " units unloaded from " + transport.getTransportID()
+                            + ". Cargo is now " + totalCargoUnits(transport) + "/" + transport.getMaxCargoCapacity() + ".",
                             null);
                 }
                 return new Response(false, "Unload failed", null);
@@ -60,13 +57,13 @@ public class CargoService implements Service {
                 Transport source = findTransport(params.get("sourceTransportId"));
                 Transport destination = findTransport(params.get("destinationTransportId"));
                 if (source == null || destination == null) {
-                    return new Response(false, "Source and/or destination trasnport not found", null);
+                    return new Response(false, "Source and/or destination transport not found", null);
                 }
                 if (source == destination) {
                     return new Response(false, "Source transport must be different from destination transport", null);
                 }
-                if (transferCargo(source, destination, quantity)) {
-                    return new Response(true, quantity + " units transferred from " + source.getTransportID()
+                if (transferCargo(source, destination, CargoUnits)) {
+                    return new Response(true, CargoUnits + " units transferred from " + source.getTransportID()
                             + " to " + destination.getTransportID() + ".", null);
                 }
                 return new Response(false, "Transfer failed", null);
@@ -75,7 +72,7 @@ public class CargoService implements Service {
         }
     }
 
-    public boolean loadCargo(Transport transport, int quantity) {
+    public boolean loadCargo(Transport transport, int CargoUnits) {
         if (transport == null) {
             return false;
         }
@@ -83,49 +80,39 @@ public class CargoService implements Service {
         Cargo cargo;
         int newTotal;
         synchronized (transport) {
-            if (!validateCargoOperation(transport) || quantity <= 0) {
+            if (!validateCargoOperation(transport) || CargoUnits <= 0) {
                 return false;
             }
-            newTotal = totalCargoUnits(transport) + quantity;
+            newTotal = totalCargoUnits(transport) + CargoUnits;
             if (newTotal > transport.getMaxCargoCapacity()) {
                 return false;
             }
-            cargo = new Cargo(newCargoId(), quantity);
+            cargo = new Cargo(newCargoId(), CargoUnits);
             transport.addCargo(cargo);
         }
-
-        eventManager.handleSuccessfulEvent(EventType.CARGO_LOADED,
-                "Cargo " + cargo.getCargoID() + " (" + quantity + " units) loaded onto "
-                        + transport.getTransportID() + " (now " + newTotal + " units)");
 
         return true;
     }
 
-    public boolean unloadCargo(Transport transport, int quantity) {
+    public boolean unloadCargo(Transport transport, int CargoUnits) {
         if (transport == null) {
             return false;
         }
 
-        int newTotal;
         synchronized (transport) {
-            if (!validateCargoOperation(transport) || quantity <= 0) {
+            if (!validateCargoOperation(transport) || CargoUnits <= 0) {
                 return false;
             }
-            if (totalCargoUnits(transport) < quantity) {
+            if (totalCargoUnits(transport) < CargoUnits) {
                 return false;
             }
-            removeCargoUnits(transport, quantity);
-            newTotal = totalCargoUnits(transport);
+            removeCargoUnits(transport, CargoUnits);
         }
 
-        eventManager.handleSuccessfulEvent(EventType.CARGO_UNLOADED,
-                quantity + " units unloaded from " + transport.getTransportID()
-                        + " (now " + newTotal + " units)");
-
-        return false;
+        return true;
     }
 
-    public boolean transferCargo(Transport source, Transport destination, int quantity) {
+    public boolean transferCargo(Transport source, Transport destination, int CargoUnits) {
         if (source == null || destination == null || source == destination) {
             return false;
         }
@@ -142,23 +129,19 @@ public class CargoService implements Service {
 
         synchronized (first) {
             synchronized (second) {
-                if (!validateTransferOperation(source, destination, quantity)) {
+                if (!validateTransferOperation(source, destination, CargoUnits)) {
                     return false;
                 }
-                List<Cargo> transferredCargo = removeCargoUnits(source, quantity);
+                List<Cargo> transferredCargo = removeCargoUnits(source, CargoUnits);
                 for (Cargo cargo : transferredCargo) {
                     destination.addCargo(cargo);
                 }
             }
         }
-
-        eventManager.handleSuccessfulEvent(EventType.CARGO_TRANSFERRED,
-                quantity + " units transferred from " + source.getTransportID()
-                        + " to " + destination.getTransportID());
         return true;
     }
 
-    public Boolean validateCargoOperation(Transport transport) {
+    public boolean validateCargoOperation(Transport transport) {
         if (transport == null || transport.getDockingBay() == null) {
             return false;
         }
@@ -166,17 +149,17 @@ public class CargoService implements Service {
         return state == TransportState.DOCKED || state == TransportState.READY;
     }
 
-    public Boolean validateTransferOperation(Transport source, Transport destination, int quantity) {
+    public boolean validateTransferOperation(Transport source, Transport destination, int CargoUnits) {
         if (source == null || destination == null || source == destination) {
             return false;
         }
         if (!validateCargoOperation(source) || !validateCargoOperation(destination)) {
             return false;
         }
-        if (quantity <= 0 || totalCargoUnits(source) < quantity) {
+        if (CargoUnits <= 0 || totalCargoUnits(source) < CargoUnits) {
             return false;
         }
-        return totalCargoUnits(destination) + quantity <= destination.getMaxCargoCapacity();
+        return totalCargoUnits(destination) + CargoUnits <= destination.getMaxCargoCapacity();
     }
 
     // Below are private helper methods
@@ -188,9 +171,9 @@ public class CargoService implements Service {
         return total;
     }
 
-    private List<Cargo> removeCargoUnits(Transport transport, int quantity) {
+    private List<Cargo> removeCargoUnits(Transport transport, int CargoUnits) {
         List<Cargo> removedCargo = new ArrayList<>();
-        int cargoUnitToRemove = quantity;
+        int cargoUnitToRemove = CargoUnits;
         for (Cargo cargo : transport.getCargo()) {
             if (cargoUnitToRemove == 0) {
                 break;
@@ -214,7 +197,7 @@ public class CargoService implements Service {
         return cargoId;
     }
 
-    private Integer readQuantity(Object value) {
+    private Integer readCargoUnits(Object value) {
         if (value instanceof Integer) {
             return (Integer) value;
         }
