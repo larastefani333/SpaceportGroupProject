@@ -30,7 +30,7 @@ public class CargoService implements Service {
             }
             transport.addCargo(cargo);
         }
-        return false;
+        return true;
     }
 
     public boolean unloadCargo(Transport transport, Cargo cargo) {
@@ -46,7 +46,7 @@ public class CargoService implements Service {
             }
             transport.removeCargo(cargo);
         }
-        return false;
+        return true;
     }
 
     public boolean canOccur(Transport transport, TransportState state)
@@ -54,8 +54,13 @@ public class CargoService implements Service {
         return transport.getState() == TransportState.DOCKED || transport.getState() == TransportState.SERVICING || transport.getState() == TransportState.READY;
     }
 
-    public boolean transferCargo(Transport source, Transport destination, int quantity) {
+    public boolean transferCargo(Transport source, Transport destination, Cargo cargo) {
         // transfer cargo between transports
+        if (canOccur(source, source.getState())) {
+            source.removeCargo(cargo);
+            destination.addCargo(cargo);
+            return true;
+        }
         return false;
     }
 
