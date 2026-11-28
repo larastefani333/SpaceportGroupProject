@@ -26,18 +26,32 @@ public class EventLog {
         {
             String filename = createFile();
             FileWriter myWriter = new FileWriter(filename);
-            myWriter.write("{\n");
-            myWriter.write("  \"" + eventID + "\": {\n");
-            myWriter.write(String.format("\"Event Type\"" + ": " + "\"%s\",", eventType.getDisplayName()).indent(4));
-            myWriter.write(String.format("\"User\"" + ": " + "\"%s\",", user.getUsername()).indent(4));
-            myWriter.write(String.format("\"Timestamp\"" + ": " + "\"%s\",", timestamp).indent(4));
-            myWriter.write(String.format("\"Description\"" + ": " + "\"%s\"", description).indent(4));
-            myWriter.write(String.format("}\n").indent(2));
-            myWriter.write("}");
+            String json = formatJson(event);
+            myWriter.write(json);
             myWriter.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public String formatJson(Event event) {
+        String json = """
+            {
+                "%s": {
+                    "Event Type": "%s",
+                    "User": "%s",
+                    "Timestamp": "%s",
+                    "Description": "%s"
+                }
+            }
+            """.formatted(
+                event.getEventID(),
+                event.getEventType().getDisplayName(),
+                event.getUser().getUsername(),
+                event.getTimestamp(),
+                event.getDescription()
+        );
+        return json;
     }
 
     public String createFile()
