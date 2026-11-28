@@ -22,22 +22,34 @@ public class EventLog {
         LocalDateTime timestamp = event.getTimestamp();
         String description = event.getDescription();
 
-        try
+        String escapedEventType = escape(event.getEventType().getDisplayName());
+        String escapedUser  = escape(event.getUser().getUsername());
+        String escapedTimestamp = escape(event.getTimestamp().toString());
+        String escapedDescription = escape(event.getDescription());
+
+        String filename = createFile();
+        try (FileWriter myWriter = new FileWriter(filename))
         {
-            String filename = createFile();
-            FileWriter myWriter = new FileWriter(filename);
             myWriter.write("{\n");
             myWriter.write("  \"" + eventID + "\": {\n");
-            myWriter.write(String.format("\"Event Type\"" + ": " + "\"%s\",", eventType.getDisplayName()).indent(4));
-            myWriter.write(String.format("\"User\"" + ": " + "\"%s\",", user.getUsername()).indent(4));
-            myWriter.write(String.format("\"Timestamp\"" + ": " + "\"%s\",", timestamp).indent(4));
-            myWriter.write(String.format("\"Description\"" + ": " + "\"%s\"", description).indent(4));
+            myWriter.write(String.format("\"Event Type\"" + ": " + "\"%s\",", escapedEventType).indent(4));
+            myWriter.write(String.format("\"User\"" + ": " + "\"%s\",", escapedUser).indent(4));
+            myWriter.write(String.format("\"Timestamp\"" + ": " + "\"%s\",", escapedTimestamp).indent(4));
+            myWriter.write(String.format("\"Description\"" + ": " + "\"%s\"", escapedDescription).indent(4));
             myWriter.write(String.format("}\n").indent(2));
             myWriter.write("}");
             myWriter.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public String escape(String text) {
+        if (text == null)
+        {
+            return "";
+        }
+        return text.replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
     }
 
     public String createFile()
