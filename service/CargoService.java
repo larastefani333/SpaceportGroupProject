@@ -2,201 +2,227 @@ package service;
 
 import communication.Request;
 import communication.Response;
-import model.Cargo;
 import model.Transport;
 import model.TransportState;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
+/**
+ * 1) Handles cargo operations: loading, unloading and transferring cargo between transports.
+ * 2) Cargo is stored on each transport as a number of units.
+ * 3) Thread safety: each operation locks only the transport(s) being used for that operation, so operations on different transports can run in parallel.
+ */
 public class CargoService implements Service {
 
     private final TransportService transportService;
-    private int nextCargoIdNumber = 1;
 
     public CargoService(TransportService transportService) {
         this.transportService = transportService;
     }
 
+    /**
+     * Processes cargo request from a client and returns the result.
+     *
+     * @param request
+     * @return a response with either success message or failure message
+     */
     @Override
     public Response handleRequest(Request request) {
         Map<String, Object> params = request.getParameters();
-        Integer CargoUnits = readCargoUnits(params.get("Cargo units"));
 
-        if (CargoUnits == null) {
-            return new Response(false, "Cargo units must be a whole number.", null);
+        Integer cargoUnits = readCargoUnits(params.get("cargoUnits"));
+        if (cargoUnits == null || cargoUnits <= 0) {
+            return new Response(false, "Cargo units must be a whole number greater than zero.", null);
         }
 
-        switch (request.getEventType()) {
-            case CARGO_LOADED: {
-                Transport transport = findTransport(params.get("transportId"));
+        return switch (request.getEventType()) {
+            case CARGO_LOADED -> {
+                Transport transport = findTransport(params.get("transportID"));
                 if (transport == null) {
-                    return new Response(false, "Transport not found.", null);
+                    yield new Response(false, "Transport not found.", null);
                 }
-                if (loadCargo(transport, CargoUnits)) {
-                    return new Response(true, CargoUnits + " units loaded onto " + transport.getTransportID()
-                            + ". Cargo is now " + totalCargoUnits(transport) + "/" + transport.getMaxCargoCapacity() + ".",
-                            null);
+                if (loadCargo(transport, cargoUnits)) {
+                    yield new Response(true, cargoUnits + " units loaded onto " + transport.getTransportID()
+                            + ". Cargo is now " + transport.getCurrentCargo() + "/"
+                            + transport.getMaxCargoCapacity() + ".", null);
                 }
-                return new Response(false, "Load failed", null);
+                yield new Response(false, "Load failed. The transport must be DOCKED, SERVICING or READY "
+                        + "and have room for " + cargoUnits + " more units.", null);
             }
-            case CARGO_UNLOADED: {
-                Transport transport = findTransport(params.get("transportId"));
+            case CARGO_UNLOADED -> {
+                Transport transport = findTransport(params.get("transportID"));
                 if (transport == null) {
-                    return new Response(false, "Transport not found.", null);
+                    yield new Response(false, "Transport not found.", null);
                 }
-                if (unloadCargo(transport, CargoUnits)) {
-                    return new Response(true, CargoUnits + " units unloaded from " + transport.getTransportID()
-                            + ". Cargo is now " + totalCargoUnits(transport) + "/" + transport.getMaxCargoCapacity() + ".",
-                            null);
+                if (unloadCargo(transport, cargoUnits)) {
+                    yield new Response(true, cargoUnits + " units unloaded from " + transport.getTransportID()
+                            + ". Cargo is now " + transport.getCurrentCargo() + "/"
+                            + transport.getMaxCargoCapacity() + ".", null);
                 }
-                return new Response(false, "Unload failed", null);
+                yield new Response(false, "Unload failed. The transport must be DOCKED, SERVICING or READY "
+                        + "and hold at least " + cargoUnits + " units.", null);
             }
-            case CARGO_TRANSFERRED:
-                Transport source = findTransport(params.get("sourceTransportId"));
-                Transport destination = findTransport(params.get("destinationTransportId"));
+            case CARGO_TRANSFERRED -> {
+                Transport source = findTransport(params.get("sourceTransportID"));
+                Transport destination = findTransport(params.get("destinationTransportID"));
                 if (source == null || destination == null) {
-                    return new Response(false, "Source and/or destination transport not found", null);
+                    yield new Response(false, "Source and/or destination transport not found.", null);
                 }
                 if (source == destination) {
-                    return new Response(false, "Source transport must be different from destination transport", null);
+                    yield new Response(false, "Source transport must be different from destination transport.", null);
                 }
-                if (transferCargo(source, destination, CargoUnits)) {
-                    return new Response(true, CargoUnits + " units transferred from " + source.getTransportID()
+                if (transferCargo(source, destination, cargoUnits)) {
+                    yield new Response(true, cargoUnits + " units transferred from " + source.getTransportID()
                             + " to " + destination.getTransportID() + ".", null);
                 }
-                return new Response(false, "Transfer failed", null);
-            default:
-                return new Response(false, "CargoService cannot handle " + request.getEventType() + ".", null);
-        }
+                yield new Response(false, "Transfer failed. Both transports must be DOCKED, SERVICING or READY, "
+                        + "the source must hold " + cargoUnits + " units and the destination must have room.", null);
+            }
+            default -> new Response(false, "CargoService cannot handle " + request.getEventType() + ".", null);
+        };
     }
 
-    public boolean loadCargo(Transport transport, int CargoUnits) {
-        if (transport == null) {
+
+    /**
+     * Loads cargo onto a transport, provided the transport is in a state that allows loading and has enough capacity.
+     *
+     * @param transport
+     * @param cargoUnits
+     * @return boolean indicating if operation was successful.
+     */
+    public boolean loadCargo(Transport transport, int cargoUnits) {
+        if (transport == null || cargoUnits <= 0) {
             return false;
         }
-
-        Cargo cargo;
-        int newTotal;
         synchronized (transport) {
-            if (!validateCargoOperation(transport) || CargoUnits <= 0) {
+            if (!validateCargoOperation(transport)) {
                 return false;
             }
-            newTotal = totalCargoUnits(transport) + CargoUnits;
+            int newTotal = transport.getCurrentCargo() + cargoUnits;
             if (newTotal > transport.getMaxCargoCapacity()) {
                 return false;
             }
-            cargo = new Cargo(newCargoId(), CargoUnits);
-            transport.addCargo(cargo);
+            transport.setCurrentCargo(newTotal);
         }
-
         return true;
     }
 
-    public boolean unloadCargo(Transport transport, int CargoUnits) {
-        if (transport == null) {
+    /**
+     * Unloads cargo from a transport, provided the transport is in a state that allows unloading and has enough cargo to remove requested amount.
+     *
+     * @param transport
+     * @param cargoUnits
+     * @return boolean indicating if operation was successful.
+     */
+    public boolean unloadCargo(Transport transport, int cargoUnits) {
+        if (transport == null || cargoUnits <= 0) {
             return false;
         }
-
         synchronized (transport) {
-            if (!validateCargoOperation(transport) || CargoUnits <= 0) {
+            if (!validateCargoOperation(transport)) {
                 return false;
             }
-            if (totalCargoUnits(transport) < CargoUnits) {
+            int newTotal = transport.getCurrentCargo() - cargoUnits;
+            if (newTotal < 0) {
                 return false;
             }
-            removeCargoUnits(transport, CargoUnits);
+            transport.setCurrentCargo(newTotal);
         }
-
         return true;
     }
 
-    public boolean transferCargo(Transport source, Transport destination, int CargoUnits) {
-        if (source == null || destination == null || source == destination) {
+    /**
+     * Move cargo from one transport to another. The transfer either fully succeeds or transfers nothing to avoid cargo being lost or duplicated.
+     *
+     * @param source
+     * @param destination
+     * @param cargoUnits
+     * @return boolean indicating if operation was successful.
+     */
+    public boolean transferCargo(Transport source, Transport destination, int cargoUnits) {
+        if (source == null || destination == null || source == destination || cargoUnits <= 0) {
             return false;
         }
 
-        Transport first;
-        Transport second;
+        Transport tempOne;
+        Transport tempTwo;
         if (source.getTransportID().compareTo(destination.getTransportID()) < 0) {
-            first = source;
-            second = destination;
+            tempOne = source;
+            tempTwo = destination;
         } else {
-            first = destination;
-            second = source;
+            tempOne = destination;
+            tempTwo = source;
         }
 
-        synchronized (first) {
-            synchronized (second) {
-                if (!validateTransferOperation(source, destination, CargoUnits)) {
+        synchronized (tempOne) {
+            synchronized (tempTwo) {
+                if (!validateTransferOperation(source, destination, cargoUnits)) {
                     return false;
                 }
-                List<Cargo> transferredCargo = removeCargoUnits(source, CargoUnits);
-                for (Cargo cargo : transferredCargo) {
-                    destination.addCargo(cargo);
-                }
+                source.setCurrentCargo(source.getCurrentCargo() - cargoUnits);
+                destination.setCurrentCargo(destination.getCurrentCargo() + cargoUnits);
             }
         }
         return true;
     }
 
+    /**
+     * Checks that transport is in a state that allows cargo operations (loading or unloading).
+     *
+     * @param transport
+     * @return boolean indicating if operation can occur.
+     */
     public boolean validateCargoOperation(Transport transport) {
         if (transport == null || transport.getDockingBay() == null) {
             return false;
         }
         TransportState state = transport.getState();
-        return state == TransportState.DOCKED || state == TransportState.READY;
+        return state == TransportState.DOCKED
+                || state == TransportState.SERVICING
+                || state == TransportState.READY;
     }
 
-    public boolean validateTransferOperation(Transport source, Transport destination, int CargoUnits) {
-        if (source == null || destination == null || source == destination) {
+    /**
+     * Checks that transfer is possible: both transports are in valid state, the source has enough cargo and the destination has capacity.
+     *
+     * @param source
+     * @param destination
+     * @param cargoUnits
+     * @return boolean indicating if transfer can occur.
+     */
+    public boolean validateTransferOperation(Transport source, Transport destination, int cargoUnits) {
+        if (source == null || destination == null || source == destination || cargoUnits <= 0) {
             return false;
         }
         if (!validateCargoOperation(source) || !validateCargoOperation(destination)) {
             return false;
         }
-        if (CargoUnits <= 0 || totalCargoUnits(source) < CargoUnits) {
+        if (source.getCurrentCargo() < cargoUnits) {
             return false;
         }
-        return totalCargoUnits(destination) + CargoUnits <= destination.getMaxCargoCapacity();
+        return destination.getCurrentCargo() + cargoUnits <= destination.getMaxCargoCapacity();
     }
 
-    // Below are private helper methods
-    private int totalCargoUnits(Transport transport) {
-        int total = 0;
-        for (Cargo cargo : transport.getCargo()) {
-            total += cargo.getCargoUnits();
+    /**
+     * Looks up transport by its ID (case-insensitive).
+     *
+     * @param id
+     * @return transport if found, null if not.
+     * todo: check with team if this should be a case insensitive check or not?
+     */
+    private Transport findTransport(Object id) {
+        if (id == null) {
+            return null;
         }
-        return total;
+        return transportService.getTransport(id.toString());
     }
 
-    private List<Cargo> removeCargoUnits(Transport transport, int CargoUnits) {
-        List<Cargo> removedCargo = new ArrayList<>();
-        int cargoUnitToRemove = CargoUnits;
-        for (Cargo cargo : transport.getCargo()) {
-            if (cargoUnitToRemove == 0) {
-                break;
-            }
-            transport.removeCargo(cargo);
-            if (cargo.getCargoUnits() <= cargoUnitToRemove) {
-                removedCargo.add(cargo);
-                cargoUnitToRemove -= cargo.getCargoUnits();
-            } else {
-                removedCargo.add(new Cargo(cargo.getCargoID(), cargoUnitToRemove));
-                transport.addCargo(new Cargo(cargo.getCargoID(), cargo.getCargoUnits() - cargoUnitToRemove));
-                cargoUnitToRemove = 0;
-            }
-        }
-        return removedCargo;
-    }
-
-    private synchronized String newCargoId() {
-        String cargoId = "C" + nextCargoIdNumber;
-        nextCargoIdNumber++;
-        return cargoId;
-    }
-
+    /**
+     * Reads a cargo amount in request as an Integer or a numeric String.
+     *
+     * @param value
+     * @return Integer if valid, null if not.
+     */
     private Integer readCargoUnits(Object value) {
         if (value instanceof Integer) {
             return (Integer) value;
@@ -209,12 +235,5 @@ public class CargoService implements Service {
             }
         }
         return null;
-    }
-
-    private Transport findTransport(Object id) {
-        if (id == null) {
-            return null;
-        }
-        return transportService.getTransport(id.toString());
     }
 }
