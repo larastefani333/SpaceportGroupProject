@@ -1,8 +1,7 @@
 package model;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 public class Transport implements Serializable {
 
@@ -12,16 +11,15 @@ public class Transport implements Serializable {
     private MaintenanceTeam maintenanceTeam;
     private LocalDateTime scheduledDeparture;
 
-    private final List<Cargo> cargo;
+    private int currentCargo;
     private final int maxCargoCapacity;
-    
 
     public Transport(String transportId, LocalDateTime scheduledDeparture, int maxCargoCapacity) {
         this.transportID = transportId;
         this.scheduledDeparture = scheduledDeparture;
         this.state = TransportState.WAITING;
 
-        this.cargo = new ArrayList<>();
+        this.currentCargo = 0;
         this.maxCargoCapacity = maxCargoCapacity;
     }
 
@@ -67,15 +65,18 @@ public class Transport implements Serializable {
         this.maintenanceTeam = maintenanceTeam;
     }
 
-    public synchronized List<Cargo> getCargo() {
-        return new ArrayList<>(cargo);
+    public synchronized int getCurrentCargo() {
+        return currentCargo;
     }
 
-    public synchronized void addCargo(Cargo cargoItem) {
-        cargo.add(cargoItem);
-    }
-
-    public synchronized void removeCargo(Cargo cargoItem) {
-        cargo.remove(cargoItem);
+    // Last line of defence: the transport itself refuses an impossible cargo amount,
+    // even if a caller forgot to check. CargoService always checks first, so this
+    // should never actually be triggered.
+    public synchronized void setCurrentCargo(int currentCargo) {
+        if (currentCargo < 0 || currentCargo > maxCargoCapacity) {
+            throw new IllegalArgumentException("Cargo must be between 0 and " + maxCargoCapacity
+                    + " units, but was " + currentCargo + ".");
+        }
+        this.currentCargo = currentCargo;
     }
 }

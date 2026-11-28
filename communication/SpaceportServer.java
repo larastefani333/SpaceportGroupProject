@@ -39,10 +39,10 @@ public class SpaceportServer {
     public SpaceportServer(int port) {
         this.port = port;
         this.connections = new ArrayList<>();
-        this.cargoService = new CargoService();
+        this.transportService = new TransportService();
+        this.cargoService = new CargoService(transportService);
         this.dockingService = new DockingService();
         this.maintenanceService = new MaintenanceService();
-        this.transportService = new TransportService();
 
         this.notificationService = new NotificationService(this);
         // need to implement event logger but leaving as null parameter for now
